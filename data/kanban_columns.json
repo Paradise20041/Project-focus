@@ -1,0 +1,29 @@
+[
+  {
+    "color": [
+      70,
+      130,
+      180
+    ],
+    "key": "todo",
+    "title": "To Do"
+  },
+  {
+    "color": [
+      255,
+      165,
+      0
+    ],
+    "key": "progress",
+    "title": "In Progress"
+  },
+  {
+    "color": [
+      50,
+      205,
+      50
+    ],
+    "key": "done",
+    "title": "Done"
+  }
+]
