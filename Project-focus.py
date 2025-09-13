@@ -19,12 +19,12 @@ from PyQt5.QtWidgets import (
 DATA_DIR = "data"
 ICONS_DIR = "icons"
 VIDEO_FOLDER = "background"
-MUSIC_FOLDERS = ["music/lofi", "music/cyberpunk", "music/ambient"]
+MUSIC_FOLDER = "music"  # ← ЕДИНСТВЕННАЯ ПАПКА МУЗЫКИ!
 LOCALES_DIR = "locales"
 
 # Создаем необходимые директории
 os.makedirs(DATA_DIR, exist_ok=True)
-for folder in [ICONS_DIR, VIDEO_FOLDER, *MUSIC_FOLDERS, "sounds", LOCALES_DIR]:
+for folder in [ICONS_DIR, VIDEO_FOLDER, MUSIC_FOLDER, "sounds", LOCALES_DIR]:
     os.makedirs(folder, exist_ok=True)
 
 TASKS_FILE = os.path.join(DATA_DIR, "tasks.json")
@@ -35,8 +35,9 @@ PLAYER_STATE_FILE = os.path.join(DATA_DIR, "player_state.json")
 KANBAN_FILE = os.path.join(DATA_DIR, "kanban.json")
 LANGUAGE_FILE = os.path.join(DATA_DIR, "language.json")
 BACKGROUND_FILE = os.path.join(DATA_DIR, "background.json")
-KANBAN_COLUMNS_FILE = os.path.join(DATA_DIR, "kanban_columns.json")  # Новый файл для сохранения настроек колонок
+KANBAN_COLUMNS_FILE = os.path.join(DATA_DIR, "kanban_columns.json")
 
+# Создаем файлы, если их нет
 for file_path in [TASKS_FILE, NOTES_FILE, NOISES_FILE, PLAYLIST_FILE, PLAYER_STATE_FILE, KANBAN_FILE]:
     if not os.path.exists(file_path):
         with open(file_path, "w", encoding="utf-8") as f:
@@ -108,15 +109,13 @@ class FloatingFocusApp(QWidget):
         self.background_files = []
         self.background_index = 0
         self.current_track_position = 0.0
-
         # --- Загрузка данных ---
         self.load_data()
         # --- UI ---
         self.ICONS = {}
         self.translations = {}
         self.current_language = "ru"
-        self.load_translations()  # Загружаем переводы ДО загрузки данных
-        # --- Загрузка данных ---
+        self.load_translations()
         self.load_data()
         self.load_icons()
         self.init_ui()
@@ -153,7 +152,7 @@ class FloatingFocusApp(QWidget):
         self.pygame_timer = QTimer()
         self.pygame_timer.timeout.connect(self.check_pygame_events)
         self.pygame_timer.start(100)
-    
+
     def check_pygame_events(self):
         """Проверяет события pygame (например, окончание трека) и обрабатывает их."""
         for event in pygame.event.get():
@@ -186,7 +185,7 @@ class FloatingFocusApp(QWidget):
         icon_map = {
             "play": (24, 24),
             "pause": (24, 24),
-            "arrow_up": (20, 20),  
+            "arrow_up": (20, 20),
             "arrow_down": (20, 20),
             "reset": (24, 24),
             "settings": (24, 24),
@@ -288,52 +287,45 @@ class FloatingFocusApp(QWidget):
                     margin: 0;
                 }
                 QPushButton:hover {
-                    background: rgba(100, 100, 150, 50);
+                    background: rgba(100, 100, 150, 0);
                     border-radius: 12px;
                 }
             """)
         layout.addWidget(self.play_btn, 1, 0, Qt.AlignCenter)
         layout.addWidget(self.reset_btn, 1, 1, Qt.AlignCenter)
         layout.addWidget(self.settings_btn, 1, 2, Qt.AlignCenter)
-
         # --- ИНИЦИАЛИЗАЦИЯ settings_layout ---
         self.settings_panel = QFrame()
-        settings_layout = QVBoxLayout(self.settings_panel)  # <-- ЭТОТ ВЫЗОВ БЫЛ ПРОПУЩЕН
+        settings_layout = QVBoxLayout(self.settings_panel)
         # --- КОНЕЦ ИНИЦИАЛИЗАЦИИ ---
-
         # --- ЗАМЕНА СТАНДАРТНЫХ КНОПОК SPINBOX НА КАСТОМНЫЕ ---
-        # WORK SPINBOX
         work_layout = QHBoxLayout()
         work_label = QLabel("work")
         work_label.setStyleSheet("""
             color: white;
             font-size: 18px;
             font-weight: bold;
-            padding: 5px 0;
+            padding: 1px 0;
         """)
         self.work_label = work_label
         work_layout.addWidget(work_label)
-
-        # Создаем контейнер для спинбокса и кастомных кнопок
         work_container = QWidget()
         work_container_layout = QHBoxLayout(work_container)
         work_container_layout.setContentsMargins(0, 0, 0, 0)
         work_container_layout.setSpacing(2)
-
         self.work_spin = QSpinBox()
-        self.work_spin.setFixedWidth(80)  # Уменьшаем ширину, так как кнопки теперь снаружи
+        self.work_spin.setFixedWidth(80)
         self.work_spin.setFixedHeight(40)
         self.work_spin.setStyleSheet("""
             QSpinBox {
                 font-size: 18px;
                 min-height: 40px;
-                padding: 5px;
-                border: 1px solid rgba(255,255,255,50);
+                padding: 1px;
+                border: 1px solid rgba(255,255,255,0);
                 border-radius: 8px;
                 background: rgba(255, 255, 255, 0);
                 color: white;
             }
-            /* Скрываем стандартные кнопки */
             QSpinBox::up-button, QSpinBox::down-button {
                 width: 0px;
                 background: none;
@@ -345,23 +337,16 @@ class FloatingFocusApp(QWidget):
         self.work_spin.setValue(self.work_time // 60)
         self.work_spin.valueChanged.connect(self.update_work_time)
         work_container_layout.addWidget(self.work_spin)
-
-        # Создаем кастомные кнопки
         work_up_btn = self.create_icon_button(self.ICONS.get("arrow_up"), lambda: self.work_spin.setValue(self.work_spin.value() + 1))
         work_up_btn.setFixedSize(20, 20)
         work_up_btn.setStyleSheet("QPushButton { background: transparent; border: none; }")
-
         work_down_btn = self.create_icon_button(self.ICONS.get("arrow_down"), lambda: self.work_spin.setValue(self.work_spin.value() - 1))
         work_down_btn.setFixedSize(20, 20)
         work_down_btn.setStyleSheet("QPushButton { background: transparent; border: none; }")
-
-        # Добавляем кнопки в контейнер
         work_container_layout.addWidget(work_up_btn)
         work_container_layout.addWidget(work_down_btn)
-
         work_layout.addWidget(work_container)
         settings_layout.addLayout(work_layout)
-
         # BREAK SPINBOX
         break_layout = QHBoxLayout()
         break_label = QLabel("break")
@@ -373,27 +358,23 @@ class FloatingFocusApp(QWidget):
         """)
         self.break_label = break_label
         break_layout.addWidget(break_label)
-
-        # Создаем контейнер для спинбокса и кастомных кнопок
         break_container = QWidget()
         break_container_layout = QHBoxLayout(break_container)
         break_container_layout.setContentsMargins(0, 0, 0, 0)
         break_container_layout.setSpacing(2)
-
         self.break_spin = QSpinBox()
-        self.break_spin.setFixedWidth(80)  # Уменьшаем ширину
-        self.break_spin.setFixedHeight(40) # Исправлено: было 60, для симметрии с work_spin
+        self.break_spin.setFixedWidth(80)
+        self.break_spin.setFixedHeight(40)
         self.break_spin.setStyleSheet("""
             QSpinBox {
                 font-size: 18px;
                 min-height: 40px;
-                padding: 5px;
-                border: 1px solid rgba(255,255,255,50);
+                padding: 1px;
+                border: 1px solid rgba(255,255,255,0);
                 border-radius: 8px;
                 background: rgba(255, 255, 255, 0);
                 color: white;
             }
-            /* Скрываем стандартные кнопки */
             QSpinBox::up-button, QSpinBox::down-button {
                 width: 0px;
                 background: none;
@@ -405,26 +386,19 @@ class FloatingFocusApp(QWidget):
         self.break_spin.setValue(self.break_time // 60)
         self.break_spin.valueChanged.connect(self.update_break_time)
         break_container_layout.addWidget(self.break_spin)
-
-        # Создаем кастомные кнопки
         break_up_btn = self.create_icon_button(self.ICONS.get("arrow_up"), lambda: self.break_spin.setValue(self.break_spin.value() + 1))
         break_up_btn.setFixedSize(20, 20)
         break_up_btn.setStyleSheet("QPushButton { background: transparent; border: none; }")
-
         break_down_btn = self.create_icon_button(self.ICONS.get("arrow_down"), lambda: self.break_spin.setValue(self.break_spin.value() - 1))
         break_down_btn.setFixedSize(20, 20)
         break_down_btn.setStyleSheet("QPushButton { background: transparent; border: none; }")
-
-        # Добавляем кнопки в контейнер
         break_container_layout.addWidget(break_up_btn)
         break_container_layout.addWidget(break_down_btn)
-
         break_layout.addWidget(break_container)
         settings_layout.addLayout(break_layout)
-
         self.settings_panel.hide()
         layout.addWidget(self.settings_panel, 2, 0, 1, 3)
-    
+
     def update_work_time(self, value):
         self.work_time = value * 60
         if not self.timer_running:
@@ -454,22 +428,10 @@ class FloatingFocusApp(QWidget):
             self.timer.stop()
             self.timer_running = False
             self.play_btn.setIcon(QIcon(self.ICONS["play"]))
-            # --- ВОСПРОИЗВОДИМ ЗВУК ОКОНЧАНИЯ ТАЙМЕРА ---
             if "timer_end" in sounds:
                 channels["timer_end"].play(sounds["timer_end"])
-            # --- КОНЕЦ ДОБАВЛЕНИЯ ЗВУКА ---
-
-            # --- ИСПРАВЛЕНИЕ: ПЕРЕКЛЮЧЕНИЕ НА ПЕРЕРЫВ ---
-            # Меняем текущее время на время перерыва
             self.current_time = self.break_time
-            # Обновляем отображение таймера, чтобы показать "05:00" (или другое значение break_time)
             self.update_timer_display()
-            # Опционально: можно автоматически запустить таймер для перерыва.
-            # Раскомментируйте следующие строки, если хотите, чтобы перерыв начинался автоматически.
-            # self.timer.start(1000)
-            # self.timer_running = True
-            # self.play_btn.setIcon(QIcon(self.ICONS["pause"]))
-            # --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
     def toggle_timer(self):
         if self.timer_running:
@@ -493,7 +455,7 @@ class FloatingFocusApp(QWidget):
         self.player_frame.setFixedHeight(60)
         self.player_frame.setStyleSheet("""
             background-color: transparent;
-            border: 1px solid rgba(255, 255, 255, 30);
+            border: 0px solid rgba(255, 255, 255, 30);
             border-radius: 12px;
         """)
         self.player_frame.resize(600, 60)
@@ -556,30 +518,23 @@ class FloatingFocusApp(QWidget):
         path = self.track_list[self.current_index]
         if not os.path.exists(path):
             return
-
         if self.is_playing:
-            # Пауза: сохраняем текущую позицию
-            self.current_track_position = pygame.mixer.music.get_pos() / 1000.0  # миллисекунды -> секунды
+            self.current_track_position = pygame.mixer.music.get_pos() / 1000.0
             pygame.mixer.music.pause()
             self.is_playing = False
             self.play_btn_player.setIcon(QIcon(self.ICONS["play"]))
         else:
-            # Воспроизведение
             if pygame.mixer.music.get_busy():
-                # Если музыка на паузе, возобновляем с сохраненной позиции
                 pygame.mixer.music.play(start=self.current_track_position)
             else:
-                # Если трек не играл или был остановлен, начинаем с начала (или с сохраненной позиции)
                 try:
                     pygame.mixer.music.load(path)
                     pygame.mixer.music.play(start=self.current_track_position)
                 except Exception as e:
                     print(f"Ошибка воспроизведения: {e}")
                     return
-
             self.is_playing = True
             self.play_btn_player.setIcon(QIcon(self.ICONS["pause"]))
-
         self.update_track_label()
 
     def update_track_label(self):
@@ -612,12 +567,10 @@ class FloatingFocusApp(QWidget):
             self.is_playing = True
             self.play_btn_player.setIcon(QIcon(self.ICONS["pause"]))
             self.update_track_label()
-            
         except Exception as e:
             print(e)
-            
+
     def handle_music_end(self):
-        """Обработчик события окончания воспроизведения трека."""
         if self.is_playing and self.track_list:
             self.next_track()
 
@@ -714,7 +667,7 @@ class FloatingFocusApp(QWidget):
         self.playlist_panel.setFixedWidth(515)
         self.playlist_panel.setStyleSheet("""
             background-color: rgba(30, 30, 40, 0);
-            border: 2px solid rgba(100, 100, 150, 0);
+            border: 1px solid rgba(100, 100, 150, 0);
             border-radius: 1px;
         """)
         self.playlist_panel.hide()
@@ -723,46 +676,38 @@ class FloatingFocusApp(QWidget):
         title = QLabel("         Текущий плейлист")
         title.setStyleSheet("color: white; font-weight: bold;")
         layout.addWidget(title)
-        scroll = QScrollArea()
-        scroll.verticalScrollBar().setStyleSheet("""
-            QScrollBar:vertical {
-                background: rgba(30, 30, 40, 0);
-                width: 16px;
-                margin: 16px 0 16px 0;
+        # === НОВЫЙ: QListWidget вместо вертикального лейаута ===
+        self.playlist_list = QListWidget()
+        self.playlist_list.setStyleSheet("""
+            QListWidget {
+                background: rgba(0, 0, 0, 50);
+                color: white;
                 border-radius: 8px;
+                border: 1px solid rgba(100, 100, 150, 100);
+                padding: 5px;
             }
-            QScrollBar::handle:vertical {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #14e2c3, stop:1 #149ae2
-                );
-                min-height: 40px;
-                border-radius: 8px;
-                margin: 0 2px;
+            QListWidget::item {
+                padding: 8px 10px;
+                margin: 2px 0;
+                border-radius: 6px;
+                background: rgba(255, 255, 255, 5);
             }
-            QScrollBar::handle:vertical:hover {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #14ffc3, stop:1 #14aee2
-                );
-                border-radius: 8px;
+            QListWidget::item:selected {
+                background: rgba(20, 200, 195, 30);
+                border: 1px solid rgba(20, 200, 195, 80);
             }
-            QScrollBar::add-line:vertical, 
-            QScrollBar::sub-line:vertical {
-                height: 0px;
-                background: none;
-                border: none;
-            }
-            QScrollBar::add-page:vertical, 
-            QScrollBar::sub-page:vertical {
-                background: none;
+            QListWidget::item:hover {
+                background: rgba(255, 255, 255, 10);
             }
         """)
-        self.playlist_content = QFrame()
-        self.playlist_layout = QVBoxLayout(self.playlist_content)
-        scroll.setWidget(self.playlist_content)
-        scroll.setWidgetResizable(True)
-        layout.addWidget(scroll) 
+        self.playlist_list.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.playlist_list.setDragDropMode(QAbstractItemView.InternalMove)
+        self.playlist_list.setDefaultDropAction(Qt.MoveAction)
+        self.playlist_list.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.playlist_list.setMaximumHeight(320)
+        self.playlist_list.setMinimumHeight(180)
+        self.playlist_list.model().rowsMoved.connect(self.on_playlist_reordered)
+        layout.addWidget(self.playlist_list)
         tr = self.translations.get(self.current_language, {})
         open_lib_btn = QPushButton(f" {tr.get('library_open_button', 'Открыть библиотеку')}")
         open_lib_btn.setStyleSheet("""
@@ -865,40 +810,35 @@ class FloatingFocusApp(QWidget):
                 widget = item.widget()
                 if widget:
                     widget.setParent(None)
-        categories = {
-            "Lofi": "music/lofi",
-            "Cyberpunk": "music/cyberpunk",
-            "Ambient": "music/ambient"
-        }
-        for cat_name, folder in categories.items():
-            if not os.path.exists(folder):
-                continue
-            cat_label = QLabel(cat_name)
-            cat_label.setStyleSheet("color: yellow; font-weight: bold; margin-top: 20px;")
-            self.library_layout.addWidget(cat_label)
-            for file in os.listdir(folder):
-                if file.lower().endswith(('.ogg', '.mp3', '.wav')):
-                    path = os.path.join(folder, file)
-                    display_name = os.path.splitext(file)[0].replace('_', ' ')
-                    row = QHBoxLayout()
-                    lbl = QLabel(display_name)
-                    lbl.setStyleSheet("color: white; padding: 2px;")
-                    row.addWidget(lbl)
-                    row.addStretch()
-                    if path not in self.track_list:
-                        btn = QPushButton("+")
-                        btn.setFixedSize(28, 28)
-                        btn.setStyleSheet("background: rgba(255.255.255.0); color: white; border-radius: 12px;")
-                        btn.clicked.connect(lambda _, p=path: self.add_to_playlist(p))
-                    else:
-                        btn = QPushButton("−")
-                        btn.setFixedSize(28, 28)
-                        btn.setStyleSheet("background: rgba(255.255.255.0); color: white; border-radius: 12px;")
-                        btn.clicked.connect(lambda _, p=path: self.remove_from_playlist(p))
-                    row.addWidget(btn)
-                    frame = QFrame()
-                    frame.setLayout(row)
-                    self.library_layout.addWidget(frame)
+        if not os.path.exists(MUSIC_FOLDER):
+            os.makedirs(MUSIC_FOLDER)
+        files = []
+        for file in os.listdir(MUSIC_FOLDER):
+            if file.lower().endswith(('.ogg', '.mp3', '.wav')):
+                path = os.path.join(MUSIC_FOLDER, file)
+                files.append(path)
+        for path in files:
+            filename = os.path.basename(path)
+            display_name = os.path.splitext(filename)[0].replace('_', ' ')
+            row = QHBoxLayout()
+            lbl = QLabel(display_name)
+            lbl.setStyleSheet("color: white; padding: 2px;")
+            row.addWidget(lbl)
+            row.addStretch()
+            if path not in self.track_list:
+                btn = QPushButton("+")
+                btn.setFixedSize(28, 28)
+                btn.setStyleSheet("background: rgba(255,255,255,0); color: white; border-radius: 12px;")
+                btn.clicked.connect(lambda _, p=path: self.add_to_playlist(p))
+            else:
+                btn = QPushButton("−")
+                btn.setFixedSize(28, 28)
+                btn.setStyleSheet("background: rgba(255,255,255,0); color: white; border-radius: 12px;")
+                btn.clicked.connect(lambda _, p=path: self.remove_from_playlist(p))
+            row.addWidget(btn)
+            frame = QFrame()
+            frame.setLayout(row)
+            self.library_layout.addWidget(frame)
 
     def add_to_playlist(self, path):
         if path not in self.track_list:
@@ -915,29 +855,41 @@ class FloatingFocusApp(QWidget):
             self.save_data()
 
     def refresh_playlist(self):
-        for i in reversed(range(self.playlist_layout.count())):
-            item = self.playlist_layout.itemAt(i)
-            if item:
-                widget = item.widget()
-                if widget:
-                    widget.setParent(None)
-        for path in self.track_list:
-            row = QHBoxLayout()
+        self.playlist_list.clear()
+        # Берём последние 7 треков (новые — в конце списка), но отображаем их в обратном порядке → новые сверху
+        recent_tracks = self.track_list[-7:] if len(self.track_list) > 7 else self.track_list
+        for path in reversed(recent_tracks):  # ← Важно! Отображаем в обратном порядке
             filename = os.path.basename(path)
             display_name = os.path.splitext(filename)[0].replace('_', ' ')
-            lbl = QLabel(display_name)
-            lbl.setStyleSheet("color: white; background: transparent; padding: 4px;")
-            lbl.setFixedHeight(30)
-            row.addWidget(lbl)
-            row.addStretch()
-            btn = QPushButton("−")
-            btn.setFixedSize(28, 28)
-            btn.setStyleSheet("background: rgba(255.255.255.0); color: white; border-radius: 12px;")
-            btn.clicked.connect(lambda _, p=path: self.remove_from_playlist(p))
-            row.addWidget(btn)
-            frame = QFrame()
-            frame.setLayout(row)
-            self.playlist_layout.addWidget(frame)
+            item = QListWidgetItem(display_name)
+            item.setData(Qt.UserRole, path)
+            self.playlist_list.addItem(item)
+        # Выделяем текущий трек
+        if self.track_list and self.current_index < len(self.track_list):
+            current_path = self.track_list[self.current_index]
+            for i in range(self.playlist_list.count()):
+                item = self.playlist_list.item(i)
+                if item.data(Qt.UserRole) == current_path:
+                    self.playlist_list.setCurrentRow(i)
+                    break
+
+    def on_playlist_reordered(self, parent, start, end, destination, row):
+        new_order = []
+        for i in range(self.playlist_list.count()):
+            item = self.playlist_list.item(i)
+            path = item.data(Qt.UserRole)
+            if path:
+                new_order.append(path)
+        filtered_track_list = [p for p in self.track_list if p in new_order]
+        final_order = []
+        for path in new_order:
+            if path not in final_order:
+                final_order.append(path)
+        self.track_list = final_order
+        if hasattr(self, 'current_index') and self.current_index < len(self.track_list):
+            current_path = self.track_list[self.current_index]
+            self.current_index = self.track_list.index(current_path)
+        self.save_data()
 
     def setup_noises_panel(self):
         self.noises_panel = DraggableFrame(self)
@@ -1200,9 +1152,6 @@ class FloatingFocusApp(QWidget):
                     );
                     border: 2px solid rgba(70, 180, 90, 0);
                 }
-                QPushButton:pressed {
-                    background: rgba(60, 160, 80, 0);
-                }
             """)
         else:
             tr = self.translations.get(self.current_language, {})
@@ -1354,10 +1303,10 @@ class FloatingFocusApp(QWidget):
             text_label = QLabel(task["text"])
             text_label.setWordWrap(True)
             text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-            text_label.setMinimumWidth(100)  # Минимальная ширина, чтобы был запас для переноса
-            text_label.setMaximumWidth(16777215)  # Это максимальное значение int, по сути "бесконечность"
+            text_label.setMinimumWidth(100)
+            text_label.setMaximumWidth(16777215)
             text_label.setWordWrap(True)
-            text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Выравнивание текста
+            text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
             text_label.setStyleSheet(f"""
                 color: {'rgba(180, 180, 180, 200)' if task['completed'] else 'white'};
                 text-decoration: {'line-through' if task['completed'] else 'none'};
@@ -1413,7 +1362,6 @@ class FloatingFocusApp(QWidget):
     # ============ KANBAN BOARD ============
     def setup_kanban_panel(self):
         self.kanban_panel = DraggableFrame(self)
-        # Начальный размер будет динамически меняться
         self.kanban_panel.resize(740, 540)
         self.kanban_panel.setStyleSheet("""
             DraggableFrame {
@@ -1468,8 +1416,6 @@ class FloatingFocusApp(QWidget):
             """)
             help_btn.clicked.connect(self.show_kanban_help)
         header.addWidget(help_btn)
-
-        # --- КНОПКА НАСТРОЕК ДОСКИ ---
         settings_icon = self.ICONS.get("settings")
         if settings_icon:
             settings_btn = self.create_icon_button(settings_icon, self.open_kanban_settings)
@@ -1504,8 +1450,6 @@ class FloatingFocusApp(QWidget):
             """)
             settings_btn.clicked.connect(self.open_kanban_settings)
         header.addWidget(settings_btn)
-        # --- КОНЕЦ ДОБАВЛЕНИЯ ---
-
         close_icon = self.ICONS.get("close_panel")
         if close_icon:
             close_btn = self.create_icon_button(close_icon, self.hide_kanban_panel)
@@ -1541,28 +1485,15 @@ class FloatingFocusApp(QWidget):
             close_btn.clicked.connect(self.hide_kanban_panel)
         header.addWidget(close_btn)
         main_layout.addLayout(header)
-
-        # Создаем горизонтальный layout для колонок
         self.columns_layout = QHBoxLayout()
         self.columns_layout.setSpacing(15)
-        # Устанавливаем выравнивание по левому краю, чтобы новые колонки добавлялись справа
         self.columns_layout.setAlignment(Qt.AlignLeft)
         main_layout.addLayout(self.columns_layout)
-
-        # Создаем колонки на основе сохраненных настроек
-        self.kanban_columns = {}  # {key: QFrame}
+        self.kanban_columns = {}
         self.create_kanban_columns_from_settings()
-
         self.kanban_panel.hide()
 
     def create_kanban_column(self, title, color, key="custom"):
-        """Создает фрейм колонки Kanban.
-        
-        Args:
-            title (str): Отображаемое название колонки.
-            color (QColor): Цвет колонки.
-            key (str): Уникальный ключ колонки для хранения данных.
-        """
         frame = QFrame()
         frame.setStyleSheet(f"""
             background-color: rgba({color.red()}, {color.green()}, {color.blue()}, 50);
@@ -1577,44 +1508,31 @@ class FloatingFocusApp(QWidget):
             "In Progress": "kanban_column_progress",
             "Done": "kanban_column_done"
         }
-        # Если ключ колонки есть в маппинге, используем его для перевода
         if key in ["todo", "progress", "done"]:
             translated_title = tr.get(column_key_map.get(title, ""), title)
         else:
-            # Для пользовательских колонок используем переданный title
             translated_title = title
         label = QLabel(translated_title)
         label.setFont(QFont("Segoe UI", 12, QFont.Bold))
         label.setStyleSheet(f"color: rgba({color.red()}, {color.green()}, {color.blue()}, 255);")
         label.setAlignment(Qt.AlignCenter)
         layout.addWidget(label)
-
-        # Создаем контейнер для задач
         container = KanbanDropContainer(self, key)
         container_layout = QVBoxLayout(container)
         container_layout.setAlignment(Qt.AlignTop)
         container_layout.setSpacing(8)
         container.setLayout(container_layout)
-
-        # Оборачиваем контейнер в ScrollArea
         scroll = QScrollArea()
         scroll.setWidget(container)
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         scroll.viewport().setStyleSheet("background: transparent;")
-        
-        # Сохраняем ссылки на важные элементы во фрейме
         frame.list_layout = container_layout
-        frame.column_name = key  # Сохраняем ключ в атрибуте фрейма
+        frame.column_name = key
         frame.container = container
-
-        # Добавляем ScrollArea в layout колонки
         layout.addWidget(scroll)
-
-        # --- ДОБАВЛЯЕМ КНОПКУ "+" ВНИЗУ КАЖДОЙ КОЛОНКИ ---
         add_task_layout = QHBoxLayout()
         add_task_layout.addStretch()
-
         add_task_btn = QPushButton("+")
         add_task_btn.setFixedSize(30, 30)
         add_task_btn.setStyleSheet(f"""
@@ -1631,78 +1549,55 @@ class FloatingFocusApp(QWidget):
             }}
         """)
         add_task_btn.clicked.connect(lambda _, col_key=key: self.show_add_task_input(col_key))
-
         add_task_layout.addWidget(add_task_btn)
         add_task_layout.addStretch()
         layout.addLayout(add_task_layout)
-        # --- КОНЕЦ ДОБАВЛЕНИЯ КНОПКИ "+"
-
-        return frame  # <-- КРИТИЧЕСКИ ВАЖНО: метод ДОЛЖЕН возвращать frame
+        return frame
 
     def create_kanban_columns_from_settings(self):
-        """Создает колонки на основе данных из KANBAN_COLUMNS_FILE."""
         try:
             with open(KANBAN_COLUMNS_FILE, "r", encoding="utf-8") as f:
                 columns_config = json.load(f)
         except Exception as e:
             print(f"Ошибка загрузки настроек колонок: {e}")
-            # Используем значения по умолчанию
             columns_config = [
                 {"key": "todo", "title": "To Do", "color": [70, 130, 180]},
                 {"key": "progress", "title": "In Progress", "color": [255, 165, 0]},
                 {"key": "done", "title": "Done", "color": [50, 205, 50]}
             ]
-
-        # Очищаем старые колонки, если они есть
         while self.columns_layout.count():
             item = self.columns_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-
         self.kanban_columns = {}
-
         for col_config in columns_config:
             key = col_config.get("key", "unknown")
             title = col_config.get("title", key.capitalize())
             color_rgb = col_config.get("color", [100, 100, 100])
             color = QColor(*color_rgb)
             column_frame = self.create_kanban_column(title, color, key=key)
-            # Сохраняем ключ и конфиг в атрибутах фрейма
             column_frame.column_key = key
             column_frame.column_title = title
             column_frame.column_color = color
             self.kanban_columns[key] = column_frame
             self.columns_layout.addWidget(column_frame)
-
-        # После создания всех колонок, обновляем ширину доски
         self.adjust_kanban_panel_width()
 
     def adjust_kanban_panel_width(self):
-        """Автоматически подстраивает ширину панели Kanban под количество колонок."""
         if not hasattr(self, 'columns_layout') or not self.kanban_columns:
             return
-
-        # Рассчитываем желаемую ширину
-        # Базовая ширина (заголовок, отступы) + (ширина колонки * количество колонок) + (отступы между колонками * (количество-1))
-        base_width = 40  # Отступы слева и справа от заголовка
-        column_width = 240  # Желаемая ширина каждой колонки
+        base_width = 40
+        column_width = 240
         spacing = 15
         num_columns = len(self.kanban_columns)
         total_width = base_width + (column_width * num_columns) + (spacing * (num_columns - 1))
-
-        # Ограничиваем максимальную ширину, чтобы не выходить за пределы экрана
-        max_width = self.width() - 40  # 40px отступ от края экрана
+        max_width = self.width() - 40
         final_width = min(total_width, max_width)
-
-        # Устанавливаем фиксированную ширину для каждой колонки
         for frame in self.kanban_columns.values():
             frame.setFixedWidth(column_width)
-
-        # Изменяем размер панели
         self.kanban_panel.setFixedWidth(final_width)
 
     def refresh_kanban_board(self):
-        # Сначала очищаем все списки
         for key in self.kanban_columns.keys():
             frame = self.kanban_columns[key]
             layout = frame.list_layout
@@ -1710,13 +1605,11 @@ class FloatingFocusApp(QWidget):
                 item = layout.takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-
-        # Затем заполняем их заново
         for key in self.kanban_columns.keys():
             frame = self.kanban_columns[key]
             layout = frame.list_layout
             seen = set()
-            for task_text in self.kanban_data.get(key, []):  # Используем .get() на случай новых ключей
+            for task_text in self.kanban_data.get(key, []):
                 if task_text in seen:
                     continue
                 seen.add(task_text)
@@ -1736,8 +1629,6 @@ class FloatingFocusApp(QWidget):
                 """)
                 task_layout = QHBoxLayout(task_widget)
                 task_layout.setContentsMargins(10, 8, 10, 8)
-
-                # Если задача связана с файлом, показываем иконку
                 if hasattr(self, 'file_paths') and task_text in self.file_paths:
                     file_path = self.file_paths[task_text]
                     if file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp')):
@@ -1752,10 +1643,10 @@ class FloatingFocusApp(QWidget):
                     text_label = QLabel(task_text)
                     text_label.setWordWrap(True)
                     text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-                    text_label.setMinimumWidth(100)  # Минимальная ширина, чтобы был запас для переноса
-                    text_label.setMaximumWidth(16777215)  # Это максимальное значение int, по сути "бесконечность"
+                    text_label.setMinimumWidth(100)
+                    text_label.setMaximumWidth(16777215)
                     text_label.setWordWrap(True)
-                    text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Выравнивание текста
+                    text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
                     if key == "done":
                         text_label.setStyleSheet("color: rgba(180, 180, 180, 220); text-decoration: line-through;")
                     else:
@@ -1765,17 +1656,15 @@ class FloatingFocusApp(QWidget):
                     text_label = QLabel(task_text)
                     text_label.setWordWrap(True)
                     text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-                    text_label.setMinimumWidth(100)  # Минимальная ширина, чтобы был запас для переноса
-                    text_label.setMaximumWidth(16777215)  # Это максимальное значение int, по сути "бесконечность"
+                    text_label.setMinimumWidth(100)
+                    text_label.setMaximumWidth(16777215)
                     text_label.setWordWrap(True)
-                    text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # Выравнивание текста
+                    text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
                     if key == "done":
                         text_label.setStyleSheet("color: rgba(180, 180, 180, 220); text-decoration: line-through;")
                     else:
                         text_label.setStyleSheet("color: white;")
                     task_layout.addWidget(text_label, 1)
-
-                # Кнопка удаления
                 delete_btn = QPushButton()
                 delete_icon = self.ICONS.get("delete_task")
                 if delete_icon:
@@ -1798,8 +1687,6 @@ class FloatingFocusApp(QWidget):
                 delete_btn.clicked.connect(lambda _, t=task_text: self.remove_kanban_task(t))
                 task_widget.task_text = task_text
                 task_widget.startPos = None
-
-                # Настройка Drag & Drop для задачи
                 def make_mouse_events(widget, col_name):
                     def mousePressEvent(event):
                         if event.button() == Qt.LeftButton:
@@ -1819,7 +1706,6 @@ class FloatingFocusApp(QWidget):
                                 drag.exec_(Qt.MoveAction)
                     widget.mousePressEvent = mousePressEvent
                     widget.mouseMoveEvent = mouseMoveEvent
-
                 make_mouse_events(task_widget, key)
                 task_layout.addWidget(delete_btn)
                 layout.addWidget(task_widget)
@@ -1858,7 +1744,7 @@ class FloatingFocusApp(QWidget):
         self.kanban_panel.hide()
 
     def remove_kanban_task(self, task_text):
-        for col in self.kanban_columns.keys():  # Используем ключи из текущих колонок
+        for col in self.kanban_columns.keys():
             if task_text in self.kanban_data.get(col, []):
                 self.kanban_data[col].remove(task_text)
         self.tasks_data = [task for task in self.tasks_data if task["text"] != task_text]
@@ -2138,7 +2024,6 @@ class FloatingFocusApp(QWidget):
                     btn.setToolTip(text)
                     if isinstance(btn, QPushButton) and btn.icon().isNull():
                         btn.setText(text.split()[0])
-        # Кнопка "Сохранить" в панели заметок
         if hasattr(self, 'notes_panel') and self.notes_panel.layout() is not None:
             for i in range(self.notes_panel.layout().count()):
                 item = self.notes_panel.layout().itemAt(i)
@@ -2147,7 +2032,6 @@ class FloatingFocusApp(QWidget):
                     if current_text in ["Сохранить", "Save", "保存", "保存", "Guardar"]:
                         item.widget().setText(tr.get("notes_save_button", "Сохранить"))
                         break
-        # Кнопка "Открыть библиотеку" в панели плейлиста
         if hasattr(self, 'playlist_panel') and self.playlist_panel.layout() is not None:
             for i in range(self.playlist_panel.layout().count()):
                 item = self.playlist_panel.layout().itemAt(i)
@@ -2156,14 +2040,10 @@ class FloatingFocusApp(QWidget):
                     if current_text in ["Открыть библиотеку", "Open Library", "打开库", "ライブラリを開く", "Abrir Biblioteca"]:
                         item.widget().setText(tr.get("library_open_button", "Открыть библиотеку"))
                         break
-        # Обновление placeholder в поле ввода задачи To-Do
         if hasattr(self, 'todo_input'):
             tr = self.translations.get(self.current_language, {})
             self.todo_input.setPlaceholderText(f"✍️ {tr.get('todo_input_placeholder', 'Введите задачу...')}")
-
-        # --- Обновление заголовков колонок Kanban ---
         self.update_kanban_column_titles()
-        # --- КОНЕЦ НОВОГО ---
         self.save_language_preference()
 
     def save_language_preference(self):
@@ -2184,25 +2064,20 @@ class FloatingFocusApp(QWidget):
         except Exception as e:
             print(f"Ошибка загрузки языка: {e}")
 
-    # --- НОВЫЙ МЕТОД: Обновление заголовков колонок Kanban ---
     def update_kanban_column_titles(self):
-        """Обновляет заголовки колонок Kanban Board на текущем языке."""
         if not hasattr(self, 'kanban_columns') or not self.kanban_columns:
             return
         tr = self.translations.get(self.current_language, {})
-        # Словарь для сопоставления внутренних ключей с ключами перевода
         column_key_map = {
             "todo": "kanban_column_todo",
             "progress": "kanban_column_progress",
             "done": "kanban_column_done"
         }
         for internal_key, frame in self.kanban_columns.items():
-            # Находим QLabel с заголовком колонки
             layout = frame.layout()
             if layout and layout.count() > 0:
                 title_widget = layout.itemAt(0).widget()
                 if isinstance(title_widget, QLabel):
-                    # Получаем ключ перевода и устанавливаем новый текст
                     translation_key = column_key_map.get(internal_key, internal_key)
                     new_title = tr.get(translation_key, internal_key.capitalize())
                     title_widget.setText(new_title)
@@ -2275,7 +2150,6 @@ class FloatingFocusApp(QWidget):
                 with open(KANBAN_FILE, "r", encoding="utf-8") as f:
                     self.kanban_data = json.load(f)
             else:
-                # Инициализируем данными из настроек колонок
                 try:
                     with open(KANBAN_COLUMNS_FILE, "r", encoding="utf-8") as f:
                         columns_config = json.load(f)
@@ -2305,7 +2179,6 @@ class FloatingFocusApp(QWidget):
         except Exception as e:
             print(f"❌ Error loading  {e}")
             self.tasks_data = []
-            # Инициализируем данными из настроек колонок
             try:
                 with open(KANBAN_COLUMNS_FILE, "r", encoding="utf-8") as f:
                     columns_config = json.load(f)
@@ -2390,17 +2263,14 @@ class FloatingFocusApp(QWidget):
 
     # --- УПРАВЛЕНИЕ НАСТРОЙКАМИ ДОСКИ KANBAN ---
     def open_kanban_settings(self):
-        """Открывает диалоговое окно для настройки колонок Kanban Board."""
         tr = self.translations.get(self.current_language, {})
         dialog = QDialog(self)
         dialog.setWindowTitle(tr.get("kanban_settings_title", "Настройки Kanban Board"))
         dialog.setFixedSize(500, 400)
         main_layout = QVBoxLayout(dialog)
-
-        # Создаем список для отображения колонок с поддержкой Drag & Drop
         self.kanban_settings_list = QListWidget()
         self.kanban_settings_list.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.kanban_settings_list.setDragDropMode(QAbstractItemView.InternalMove)  # Включаем DnD
+        self.kanban_settings_list.setDragDropMode(QAbstractItemView.InternalMove)
         self.kanban_settings_list.setDefaultDropAction(Qt.MoveAction)
         self.kanban_settings_list.setStyleSheet("""
             QListWidget {
@@ -2419,8 +2289,6 @@ class FloatingFocusApp(QWidget):
             }
         """)
         main_layout.addWidget(self.kanban_settings_list)
-
-        # --- КНОПКИ УПРАВЛЕНИЯ ПОРЯДКОМ ---
         order_layout = QHBoxLayout()
         move_up_btn = QPushButton(tr.get("kanban_column_move_up_button", "▲ Вверх"))
         move_up_btn.clicked.connect(lambda: self.move_selected_column(-1))
@@ -2466,9 +2334,6 @@ class FloatingFocusApp(QWidget):
         order_layout.addWidget(move_down_btn)
         order_layout.addStretch()
         main_layout.addLayout(order_layout)
-        # --- КОНЕЦ КНОПОК ПОРЯДКА ---
-
-        # Кнопки управления
         buttons_layout = QHBoxLayout()
         add_btn = QPushButton(tr.get("kanban_column_add_button", "Добавить"))
         add_btn.clicked.connect(self.add_kanban_column_dialog)
@@ -2480,8 +2345,6 @@ class FloatingFocusApp(QWidget):
         delete_btn.clicked.connect(self.delete_selected_kanban_column)
         buttons_layout.addWidget(delete_btn)
         main_layout.addLayout(buttons_layout)
-
-        # Кнопки ОК/Отмена
         ok_cancel_layout = QHBoxLayout()
         ok_btn = QPushButton(tr.get("kanban_column_ok_button", "OK"))
         ok_btn.clicked.connect(lambda: self.apply_kanban_settings(dialog))
@@ -2490,140 +2353,72 @@ class FloatingFocusApp(QWidget):
         cancel_btn.clicked.connect(dialog.reject)
         ok_cancel_layout.addWidget(cancel_btn)
         main_layout.addLayout(ok_cancel_layout)
-
-        # Заполняем список текущими колонками
         self.populate_kanban_settings_list()
-
-        # Показываем диалог
         if dialog.exec_() == QDialog.Accepted:
             pass
         else:
             self.restore_kanban_settings()
 
     def populate_kanban_settings_list(self):
-        """Заполняет QListWidget текущими настройками колонок."""
         self.kanban_settings_list.clear()
         try:
             with open(KANBAN_COLUMNS_FILE, "r", encoding="utf-8") as f:
                 self.backup_columns_config = json.load(f)
         except:
             self.backup_columns_config = []
-
         for col_config in self.backup_columns_config:
             key = col_config.get("key", "unknown")
             title = col_config.get("title", key.capitalize())
             task_count = len(self.kanban_data.get(key, []))
             item = QListWidgetItem(title)
-            # Сохраняем конфиг в данных элемента списка
             item.setData(Qt.UserRole, col_config)
             self.kanban_settings_list.addItem(item)
 
     def add_kanban_column_dialog(self):
-        """Открывает диалог для добавления новой колонки."""
         tr = self.translations.get(self.current_language, {})
         dialog = QDialog(self)
         dialog.setWindowTitle(tr.get("kanban_column_add_dialog_title", "Добавить колонку"))
         layout = QGridLayout(dialog)
-
         layout.addWidget(QLabel(tr.get("kanban_column_name_label", "Название:")), 0, 0)
         name_input = QLineEdit()
         layout.addWidget(name_input, 0, 1)
-
         layout.addWidget(QLabel(tr.get("kanban_column_color_label", "Цвет:")), 1, 0)
         color_button = QPushButton(tr.get("kanban_column_color_label", "Выбрать цвет"))
-        color = QColor(100, 100, 100)  # Цвет по умолчанию
-
+        color = QColor(100, 100, 100)
         def pick_color():
             nonlocal color
             color = QColorDialog.getColor(initial=color, parent=dialog)
             if color.isValid():
                 color_button.setStyleSheet(f"background-color: {color.name()};")
-
         color_button.clicked.connect(pick_color)
+        color_button.setStyleSheet(f"background-color: {color.name()};")
         layout.addWidget(color_button, 1, 1)
-
         ok_btn = QPushButton(tr.get("kanban_column_ok_button", "OK"))
         cancel_btn = QPushButton(tr.get("kanban_column_cancel_button", "Отмена"))
-
         ok_btn.clicked.connect(dialog.accept)
         cancel_btn.clicked.connect(dialog.reject)
-
         layout.addWidget(ok_btn, 2, 0)
         layout.addWidget(cancel_btn, 2, 1)
-
         if dialog.exec_() == QDialog.Accepted:
             title = name_input.text().strip()
             if not title:
                 QMessageBox.warning(self, tr.get("kanban_column_add_dialog_title", "Ошибка"), tr.get("kanban_column_name_label", "Название не может быть пустым."))
                 return
-
-            # Генерируем уникальный ключ
             key = self.generate_unique_column_key(title)
-
-            # Создаем конфиг новой колонки
             new_config = {
                 "key": key,
                 "title": title,
                 "color": [color.red(), color.green(), color.blue()]
             }
-
-            # Добавляем в список настроек
             tr_format = tr.get("kanban_column_task_count_format", " (Задач: {count})")
             item = QListWidgetItem(f"{title}{tr_format.format(count=0)}")
             item.setData(Qt.UserRole, new_config)
             self.kanban_settings_list.addItem(item)
-
-            # Инициализируем данные для новой колонки
-            if not hasattr(self, 'kanban_data'):
-                self.kanban_data = {}
-            self.kanban_data[key] = []
-
-        def pick_color():
-            nonlocal color
-            color = QColorDialog.getColor(initial=color, parent=dialog)
-            if color.isValid():
-                color_button.setStyleSheet(f"background-color: {color.name()};")
-
-        color_button.clicked.connect(pick_color)
-        layout.addWidget(color_button, 1, 1)
-
-        ok_btn = QPushButton("OK")
-        cancel_btn = QPushButton("Отмена")
-
-        ok_btn.clicked.connect(dialog.accept)
-        cancel_btn.clicked.connect(dialog.reject)
-
-        layout.addWidget(ok_btn, 2, 0)
-        layout.addWidget(cancel_btn, 2, 1)
-
-        if dialog.exec_() == QDialog.Accepted:
-            title = name_input.text().strip()
-            if not title:
-                QMessageBox.warning(self, "Ошибка", "Название не может быть пустым.")
-                return
-
-            # Генерируем уникальный ключ
-            key = self.generate_unique_column_key(title)
-
-            # Создаем конфиг новой колонки
-            new_config = {
-                "key": key,
-                "title": title,
-                "color": [color.red(), color.green(), color.blue()]
-            }
-
-            # Добавляем в список настроек
-            item = QListWidgetItem(title)
-            item.setData(Qt.UserRole, new_config)
-            self.kanban_settings_list.addItem(item)
-
-            # Инициализируем данные для новой колонки
             if not hasattr(self, 'kanban_data'):
                 self.kanban_data = {}
             self.kanban_data[key] = []
 
     def generate_unique_column_key(self, title):
-        """Генерирует уникальный ключ для колонки на основе ее названия."""
         base_key = "".join(c.lower() for c in title if c.isalnum() or c == '_') or "column"
         key = base_key
         counter = 1
@@ -2639,87 +2434,66 @@ class FloatingFocusApp(QWidget):
         return key
 
     def edit_selected_kanban_column(self):
-        """Открывает диалог для редактирования выбранной колонки."""
         tr = self.translations.get(self.current_language, {})
         current_row = self.kanban_settings_list.currentRow()
         if current_row < 0:
             QMessageBox.warning(self, tr.get("kanban_column_edit_dialog_title", "Ошибка"), tr.get("kanban_column_edit_button", "Выберите колонку для редактирования."))
             return
-
         current_item = self.kanban_settings_list.item(current_row)
         old_config = current_item.data(Qt.UserRole)
         if not old_config:
             return
-
         old_title = old_config.get("title", "")
         old_color_rgb = old_config.get("color", [100, 100, 100])
         old_color = QColor(*old_color_rgb)
-
         dialog = QDialog(self)
         dialog.setWindowTitle(tr.get("kanban_column_edit_dialog_title", "Изменить колонку"))
         layout = QGridLayout(dialog)
-
         layout.addWidget(QLabel(tr.get("kanban_column_name_label", "Название:")), 0, 0)
         name_input = QLineEdit(old_title)
         layout.addWidget(name_input, 0, 1)
-
         layout.addWidget(QLabel(tr.get("kanban_column_color_label", "Цвет:")), 1, 0)
         color_button = QPushButton(tr.get("kanban_column_color_label", "Выбрать цвет"))
-
         def pick_color():
             nonlocal old_color
             color = QColorDialog.getColor(initial=old_color, parent=dialog)
             if color.isValid():
                 old_color = color
                 color_button.setStyleSheet(f"background-color: {color.name()};")
-
         color_button.clicked.connect(pick_color)
         color_button.setStyleSheet(f"background-color: {old_color.name()};")
         layout.addWidget(color_button, 1, 1)
-
         ok_btn = QPushButton(tr.get("kanban_column_ok_button", "OK"))
         cancel_btn = QPushButton(tr.get("kanban_column_cancel_button", "Отмена"))
-
         ok_btn.clicked.connect(dialog.accept)
         cancel_btn.clicked.connect(dialog.reject)
-
         layout.addWidget(ok_btn, 2, 0)
         layout.addWidget(cancel_btn, 2, 1)
-
         if dialog.exec_() == QDialog.Accepted:
             new_title = name_input.text().strip()
             if not new_title:
                 QMessageBox.warning(self, tr.get("kanban_column_edit_dialog_title", "Ошибка"), tr.get("kanban_column_name_label", "Название не может быть пустым."))
                 return
-
-            # Обновляем конфиг
             new_config = old_config.copy()
             new_config["title"] = new_title
             new_config["color"] = [old_color.red(), old_color.green(), old_color.blue()]
-
-            # Обновляем элемент списка
             task_count = len(self.kanban_data.get(new_config["key"], []))
             tr_format = tr.get("kanban_column_task_count_format", " (Задач: {count})")
             current_item.setText(f"{new_title}{tr_format.format(count=task_count)}")
             current_item.setData(Qt.UserRole, new_config)
 
     def delete_selected_kanban_column(self):
-        """Удаляет выбранную колонку."""
         tr = self.translations.get(self.current_language, {})
         current_row = self.kanban_settings_list.currentRow()
         if current_row < 0:
             QMessageBox.warning(self, tr.get("kanban_column_delete_button", "Ошибка"), tr.get("kanban_column_delete_button", "Выберите колонку для удаления."))
             return
-
         current_item = self.kanban_settings_list.item(current_row)
         col_config = current_item.data(Qt.UserRole)
         if not col_config:
             return
-
         col_key = col_config.get("key", "")
         col_title = col_config.get("title", "")
-
-        # Предупреждение, если в колонке есть задачи
         task_count = len(self.kanban_data.get(col_key, []))
         if task_count > 0:
             tr_text = tr.get("kanban_column_delete_confirm_text", "В колонке '{col_name}' есть {task_count} задач. Они будут удалены. Продолжить?")
@@ -2733,91 +2507,52 @@ class FloatingFocusApp(QWidget):
             )
             if reply == QMessageBox.No:
                 return
-
-        # Удаляем данные колонки
         self.kanban_data.pop(col_key, None)
-        # Удаляем элемент из списка
         self.kanban_settings_list.takeItem(current_row)
 
     def move_selected_column(self, direction):
-        """Перемещает выбранную колонку в списке настроек вверх или вниз.
-        
-        Args:
-            direction (int): -1 для перемещения вверх, 1 для перемещения вниз.
-        """
         current_row = self.kanban_settings_list.currentRow()
         if current_row < 0:
             return
-
         new_row = current_row + direction
         if new_row < 0 or new_row >= self.kanban_settings_list.count():
-            return  # Нельзя выйти за границы списка
-
-        # Получаем элементы
+            return
         current_item = self.kanban_settings_list.takeItem(current_row)
-        # Вставляем текущий элемент на новую позицию
         self.kanban_settings_list.insertItem(new_row, current_item)
-        # Выбираем его снова
         self.kanban_settings_list.setCurrentRow(new_row)
 
     def apply_kanban_settings(self, dialog):
-        """Применяет изменения, сделанные в диалоге настроек."""
         try:
-            # Собираем новый конфиг колонок из QListWidget
             new_columns_config = []
             for i in range(self.kanban_settings_list.count()):
                 item = self.kanban_settings_list.item(i)
                 config = item.data(Qt.UserRole)
                 if config:
                     new_columns_config.append(config)
-
-            # Сохраняем новый конфиг в файл
             with open(KANBAN_COLUMNS_FILE, "w", encoding="utf-8") as f:
                 json.dump(new_columns_config, f, indent=2)
-
-            # Пересоздаем колонки на доске
             self.create_kanban_columns_from_settings()
-
-            # Обновляем UI доски
             self.refresh_kanban_board()
-
-            # Сохраняем основные данные (задачи)
             self.save_data()
-
             QMessageBox.information(self, "Успех", "Настройки Kanban Board успешно применены.")
             dialog.accept()
-
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось применить настройки: {str(e)}")
 
     def restore_kanban_settings(self):
-        """Восстанавливает исходное состояние Kanban Board (при нажатии Отмена)."""
-        pass  # В данной реализации ничего не нужно делать, так как файл не был изменен до OK
+        pass
 
-    # --- МЕТОДЫ ДЛЯ ДОБАВЛЕНИЯ ЗАДАЧ ВНУТРИ КОЛОНОК ---
     def show_add_task_input(self, column_key):
-        """Показывает поле ввода для добавления новой задачи в указанную колонку.
-        
-        Args:
-            column_key (str): Ключ колонки, в которую нужно добавить задачу.
-        """
-        # Находим фрейм колонки
         if column_key not in self.kanban_columns:
             return
-
         column_frame = self.kanban_columns[column_key]
-        # Находим layout колонки (это главный layout фрейма)
         column_layout = column_frame.layout()
         if not column_layout:
             return
-
-        # Создаем виджет-контейнер для поля ввода и кнопки отмены
         input_container = QWidget()
         input_layout = QHBoxLayout(input_container)
         input_layout.setContentsMargins(0, 0, 0, 0)
         input_layout.setSpacing(5)
-
-        # Создаем поле ввода
         line_edit = QLineEdit()
         tr = self.translations.get(self.current_language, {})
         line_edit.setPlaceholderText(tr.get("kanban_column_add_task_placeholder", "Введите название задачи..."))
@@ -2835,8 +2570,6 @@ class FloatingFocusApp(QWidget):
                 background: rgba(255, 255, 255, 35);
             }
         """)
-
-        # Создаем кнопку отмены
         cancel_btn = QPushButton("✕")
         cancel_btn.setFixedSize(24, 24)
         cancel_btn.setStyleSheet("""
@@ -2853,25 +2586,15 @@ class FloatingFocusApp(QWidget):
             }
         """)
         cancel_btn.clicked.connect(lambda: self.cancel_add_task(input_container, column_layout))
-
-        input_layout.addWidget(line_edit, 1)  # Растягиваем поле ввода
+        input_layout.addWidget(line_edit, 1)
         input_layout.addWidget(cancel_btn)
-
-        # Вставляем контейнер в layout колонки ПЕРЕД кнопкой "+"
         insert_index = column_layout.count() - 1
         column_layout.insertWidget(insert_index, input_container)
-
-        # Устанавливаем фокус на поле ввода
         line_edit.setFocus()
-
-        # Подключаем обработчик нажатия Enter
         line_edit.returnPressed.connect(lambda: self.add_task_from_input(line_edit, input_container, column_key, column_layout))
-
-        # Подключаем обработчик потери фокуса
         original_focus_out = line_edit.focusOutEvent
         def new_focus_out(e):
-            original_focus_out(e)  # Сначала вызываем оригинальное поведение
-            # Затем наше кастомное поведение
+            original_focus_out(e)
             text = line_edit.text().strip()
             if text:
                 self.add_task_from_input(line_edit, input_container, column_key, column_layout)
@@ -2880,18 +2603,14 @@ class FloatingFocusApp(QWidget):
         line_edit.focusOutEvent = new_focus_out
 
     def add_task_from_input(self, line_edit, input_container, column_key, column_layout):
-        """Добавляет задачу из поля ввода и удаляет поле."""
         text = line_edit.text().strip()
         if text:
-            # Удаляем задачу из всех других колонок, если она там есть
             for col in self.kanban_columns.keys():
                 if text in self.kanban_data.get(col, []):
                     self.kanban_data[col].remove(text)
-            # Добавляем задачу в целевую колонку
             if column_key not in self.kanban_data:
                 self.kanban_data[column_key] = []
             self.kanban_data[column_key].append(text)
-            # Если колонка — "progress" или "done", добавляем задачу в To-Do List
             if column_key in ["progress", "done"]:
                 found = False
                 for task in self.tasks_data:
@@ -2902,15 +2621,14 @@ class FloatingFocusApp(QWidget):
                 if not found:
                     initial_status = True if column_key == "done" else False
                     self.tasks_data.append({"text": text, "completed": initial_status})
-            # Сохраняем и обновляем UI
+            else:
+                self.tasks_data = [task for task in self.tasks_data if task["text"] != text]
             self.save_data()
             self.refresh_kanban_board()
             self.refresh_todo_list()
-        # Удаляем поле ввода в любом случае
         self.cancel_add_task(input_container, column_layout)
 
     def cancel_add_task(self, input_container, column_layout):
-        """Удаляет поле ввода без добавления задачи."""
         column_layout.removeWidget(input_container)
         input_container.deleteLater()
 
@@ -2920,12 +2638,10 @@ class DraggableFrame(QFrame):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.drag_start_position = None
-
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.drag_start_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
-
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.LeftButton and self.drag_start_position:
             self.move(event.globalPos() - self.drag_start_position)
@@ -2938,11 +2654,9 @@ class KanbanDropContainer(QWidget):
         self.parent_app = parent_app
         self.column_name = column_name
         self.setAcceptDrops(True)
-
     def dragEnterEvent(self, event):
         if event.mimeData().hasText() or event.mimeData().hasUrls():
             event.acceptProposedAction()
-
     def dropEvent(self, event):
         mime_data = event.mimeData()
         if mime_data.hasUrls():
@@ -2952,35 +2666,27 @@ class KanbanDropContainer(QWidget):
                     file_name = os.path.basename(file_path)
                     app = self.parent_app
                     if isinstance(app, FloatingFocusApp):
-                        # Удаляем задачу из всех колонок
                         for col in app.kanban_columns.keys():
                             if file_name in app.kanban_data.get(col, []):
                                 app.kanban_data[col].remove(file_name)
-                        # Добавляем в целевую колонку
                         if self.column_name not in app.kanban_data:
                             app.kanban_data[self.column_name] = []
                         app.kanban_data[self.column_name].append(file_name)
-                        # Управление списком To-Do: задача должна быть в списке ТОЛЬКО если в колонке "progress" или "done"
                         if self.column_name in ["progress", "done"]:
-                            # Убеждаемся, что задача есть в списке To-Do
                             found = False
                             for task in app.tasks_data:
                                 if task["text"] == file_name:
-                                    # Обновляем статус, если нужно
                                     if self.column_name == "done":
                                         task["completed"] = True
-                                    else: # progress
+                                    else:
                                         task["completed"] = False
                                     found = True
                                     break
                             if not found:
-                                # Добавляем новую задачу в список To-Do
                                 initial_status = True if self.column_name == "done" else False
                                 app.tasks_data.append({"text": file_name, "completed": initial_status})
                         else:
-                            # Если задача перемещена НЕ в "progress" и НЕ в "done", удаляем ее из списка To-Do
                             app.tasks_data = [task for task in app.tasks_data if task["text"] != file_name]
-                        # Сохраняем путь к файлу
                         if not hasattr(app, 'file_paths'):
                             app.file_paths = {}
                         app.file_paths[file_name] = file_path
@@ -2996,33 +2702,26 @@ class KanbanDropContainer(QWidget):
                 source_column = "unknown"
             app = self.parent_app
             if isinstance(app, FloatingFocusApp):
-                # Удаляем задачу из всех колонок
                 for col in app.kanban_columns.keys():
                     if task_text in app.kanban_data.get(col, []):
                         app.kanban_data[col].remove(task_text)
-                # Добавляем в целевую колонку
                 if self.column_name not in app.kanban_data:
                     app.kanban_data[self.column_name] = []
                 app.kanban_data[self.column_name].append(task_text)
-                # Управление списком To-Do: задача должна быть в списке ТОЛЬКО если в колонке "progress" или "done"
                 if self.column_name in ["progress", "done"]:
-                    # Убеждаемся, что задача есть в списке To-Do
                     found = False
                     for task in app.tasks_data:
                         if task["text"] == task_text:
-                            # Обновляем статус в зависимости от колонки
                             if self.column_name == "done":
                                 task["completed"] = True
-                            else: # progress
+                            else:
                                 task["completed"] = False
                             found = True
                             break
                     if not found:
-                        # Добавляем новую задачу в список To-Do
                         initial_status = True if self.column_name == "done" else False
                         app.tasks_data.append({"text": task_text, "completed": initial_status})
                 else:
-                    # Если задача перемещена НЕ в "progress" и НЕ в "done", удаляем ее из списка To-Do
                     app.tasks_data = [task for task in app.tasks_data if task["text"] != task_text]
                 app.refresh_todo_list()
                 app.refresh_kanban_board()
@@ -3030,11 +2729,9 @@ class KanbanDropContainer(QWidget):
         event.accept()
 
 def set_app_icon():
-    """Устанавливает иконку приложения для Windows."""
-    myappid = 'mycompany.myproduct.subproduct.version' # произвольная строка
+    myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
-# === ЗАПУСК ПРИЛОЖЕНИЯ ===
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = FloatingFocusApp()
