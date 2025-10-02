@@ -14,19 +14,14 @@ from PyQt5.QtWidgets import (
     QShortcut, QSpinBox, QMessageBox, QListWidget, QListWidgetItem,
     QAbstractItemView, QSizePolicy, QDialog, QColorDialog
 )
-
-# --- Настройки ---
 DATA_DIR = "data"
 ICONS_DIR = "icons"
 VIDEO_FOLDER = "background"
-MUSIC_FOLDER = "music"  # ← ЕДИНСТВЕННАЯ ПАПКА МУЗЫКИ!
+MUSIC_FOLDER = "music"
 LOCALES_DIR = "locales"
-
-# Создаем необходимые директории
 os.makedirs(DATA_DIR, exist_ok=True)
 for folder in [ICONS_DIR, VIDEO_FOLDER, MUSIC_FOLDER, "sounds", LOCALES_DIR]:
     os.makedirs(folder, exist_ok=True)
-
 TASKS_FILE = os.path.join(DATA_DIR, "tasks.json")
 NOTES_FILE = os.path.join(DATA_DIR, "notes.json")
 NOISES_FILE = os.path.join(DATA_DIR, "noises.json")
@@ -36,8 +31,6 @@ KANBAN_FILE = os.path.join(DATA_DIR, "kanban.json")
 LANGUAGE_FILE = os.path.join(DATA_DIR, "language.json")
 BACKGROUND_FILE = os.path.join(DATA_DIR, "background.json")
 KANBAN_COLUMNS_FILE = os.path.join(DATA_DIR, "kanban_columns.json")
-
-# Создаем файлы, если их нет
 for file_path in [TASKS_FILE, NOTES_FILE, NOISES_FILE, PLAYLIST_FILE, PLAYER_STATE_FILE, KANBAN_FILE]:
     if not os.path.exists(file_path):
         with open(file_path, "w", encoding="utf-8") as f:
@@ -47,8 +40,6 @@ for file_path in [TASKS_FILE, NOTES_FILE, NOISES_FILE, PLAYLIST_FILE, PLAYER_STA
                 json.dump({"todo": [], "progress": [], "done": []}, f)
             else:
                 json.dump({}, f)
-
-# Создаем файл настроек колонок, если его нет
 default_columns = [
     {"key": "todo", "title": "To Do", "color": [70, 130, 180]},
     {"key": "progress", "title": "In Progress", "color": [255, 165, 0]},
@@ -57,8 +48,6 @@ default_columns = [
 if not os.path.exists(KANBAN_COLUMNS_FILE):
     with open(KANBAN_COLUMNS_FILE, "w", encoding="utf-8") as f:
         json.dump(default_columns, f, indent=2)
-
-# --- Звук ---
 pygame.mixer.init()
 pygame.init()
 SOUND_PATHS = {
@@ -78,8 +67,6 @@ for name, path in SOUND_PATHS.items():
             print(f"✅ Sound loaded: {name}")
         except Exception as e:
             print(f"❌ Failed to load sound {name}: {e}")
-
-# --- Видео ---
 VIDEO_PATH = None
 for ext in [".mov", ".mp4", ".avi", ".mkv"]:
     candidate = os.path.join(VIDEO_FOLDER, f"bg{ext}")
@@ -87,8 +74,6 @@ for ext in [".mov", ".mp4", ".avi", ".mkv"]:
         VIDEO_PATH = candidate
         print(f"✅ Found video: {candidate}")
         break
-
-# === ОСНОВНОЕ ОКНО ===
 class FloatingFocusApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -109,9 +94,7 @@ class FloatingFocusApp(QWidget):
         self.background_files = []
         self.background_index = 0
         self.current_track_position = 0.0
-        # --- Загрузка данных ---
         self.load_data()
-        # --- UI ---
         self.ICONS = {}
         self.translations = {}
         self.current_language = "ru"
@@ -119,14 +102,12 @@ class FloatingFocusApp(QWidget):
         self.load_data()
         self.load_icons()
         self.init_ui()
-        # --- Инициализация таймера для видеофона ---
         self.video_timer = QTimer()
         self.video_timer.timeout.connect(self.update_video)
+        self.video_timer.start(16)
         self.load_backgrounds()
         self.load_video()
-        # --- Запуск шумов ---
         self.start_permanent_noises()
-        # --- Воспроизведение последнего трека ---
         if hasattr(self, 'last_played_track') and self.last_played_track:
             if self.last_played_track in self.track_list:
                 self.current_index = self.track_list.index(self.last_played_track)
@@ -143,24 +124,18 @@ class FloatingFocusApp(QWidget):
         self.setup_kanban_panel()
         self.setup_noises_panel()
         self.refresh_kanban_board()
-        # --- ИНИЦИАЛИЗАЦИЯ РАДИАЛЬНОГО МЕНЮ НАСТРОЕК ---
         self.setup_settings_radial_menu()
         self.set_language(self.current_language)
-        # --- Глобальный хоткей для паузы/воспроизведения на пробел ---
         self.shortcut_play_pause = QShortcut(" ", self)
         self.shortcut_play_pause.activated.connect(self.play_pause)
         self.pygame_timer = QTimer()
         self.pygame_timer.timeout.connect(self.check_pygame_events)
         self.pygame_timer.start(100)
-
     def check_pygame_events(self):
-        """Проверяет события pygame (например, окончание трека) и обрабатывает их."""
         for event in pygame.event.get():
-            if event.type == pygame.USEREVENT + 1:  # Событие окончания музыки
+            if event.type == pygame.USEREVENT + 1:  
                 self.handle_music_end()
-
     def load_translations(self):
-        """Загружает все файлы локализации из папки `locales`."""
         supported_languages = ["ru", "en", "cn", "jp", "es"]
         for lang in supported_languages:
             file_path = os.path.join(LOCALES_DIR, f"{lang}.json")
@@ -172,7 +147,6 @@ class FloatingFocusApp(QWidget):
                     print(f"❌ Ошибка загрузки перевода {lang}: {e}")
             else:
                 print(f"⚠️ Файл перевода не найден: {file_path}")
-
     def start_permanent_noises(self):
         """Запускает шумы, если громкость > 0"""
         for name in self.noises_volumes:
@@ -180,7 +154,6 @@ class FloatingFocusApp(QWidget):
                 vol = self.noises_volumes[name] / 100
                 channels[name].play(sounds[name], loops=-1)
                 sounds[name].set_volume(vol)
-
     def load_icons(self):
         icon_map = {
             "play": (24, 24),
@@ -229,7 +202,6 @@ class FloatingFocusApp(QWidget):
                     print(f"❌ Failed to load icon {name}: {e}")
             else:
                 self.ICONS[name] = None
-
     def init_ui(self):
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -251,7 +223,6 @@ class FloatingFocusApp(QWidget):
         self.setup_playlist_panel()
         self.setup_library_panel()
         self.update_timer_display()
-
     def toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
@@ -260,7 +231,6 @@ class FloatingFocusApp(QWidget):
             self.resize(geometry.width(), geometry.height())
         else:
             self.showFullScreen()
-
     def setup_timer_panel(self):
         self.timer_frame = QFrame(self)
         self.timer_frame.setFixedWidth(300)
@@ -294,11 +264,8 @@ class FloatingFocusApp(QWidget):
         layout.addWidget(self.play_btn, 1, 0, Qt.AlignCenter)
         layout.addWidget(self.reset_btn, 1, 1, Qt.AlignCenter)
         layout.addWidget(self.settings_btn, 1, 2, Qt.AlignCenter)
-        # --- ИНИЦИАЛИЗАЦИЯ settings_layout ---
         self.settings_panel = QFrame()
         settings_layout = QVBoxLayout(self.settings_panel)
-        # --- КОНЕЦ ИНИЦИАЛИЗАЦИИ ---
-        # --- ЗАМЕНА СТАНДАРТНЫХ КНОПОК SPINBOX НА КАСТОМНЫЕ ---
         work_layout = QHBoxLayout()
         work_label = QLabel("work")
         work_label.setStyleSheet("""
@@ -347,7 +314,6 @@ class FloatingFocusApp(QWidget):
         work_container_layout.addWidget(work_down_btn)
         work_layout.addWidget(work_container)
         settings_layout.addLayout(work_layout)
-        # BREAK SPINBOX
         break_layout = QHBoxLayout()
         break_label = QLabel("break")
         break_label.setStyleSheet("""
@@ -398,16 +364,13 @@ class FloatingFocusApp(QWidget):
         settings_layout.addLayout(break_layout)
         self.settings_panel.hide()
         layout.addWidget(self.settings_panel, 2, 0, 1, 3)
-
     def update_work_time(self, value):
         self.work_time = value * 60
         if not self.timer_running:
             self.current_time = self.work_time
             self.update_timer_display()
-
     def update_break_time(self, value):
         self.break_time = value * 60
-
     def toggle_settings(self):
         if self.settings_panel.isVisible():
             self.settings_panel.hide()
@@ -415,11 +378,9 @@ class FloatingFocusApp(QWidget):
             self.settings_panel.show()
         self.timer_frame.layout().activate()
         self.timer_frame.adjustSize()
-
     def update_timer_display(self):
         m, s = divmod(self.current_time, 60)
         self.timer_label.setText(f"{m:02}:{s:02}")
-
     def update_timer(self):
         if self.current_time > 0:
             self.current_time -= 1
@@ -432,7 +393,6 @@ class FloatingFocusApp(QWidget):
                 channels["timer_end"].play(sounds["timer_end"])
             self.current_time = self.break_time
             self.update_timer_display()
-
     def toggle_timer(self):
         if self.timer_running:
             self.timer.stop()
@@ -442,14 +402,12 @@ class FloatingFocusApp(QWidget):
             self.timer.start(1000)
             self.timer_running = True
             self.play_btn.setIcon(QIcon(self.ICONS["pause"]))
-
     def reset_timer(self):
         self.timer.stop()
         self.timer_running = False
         self.current_time = self.work_time
         self.update_timer_display()
         self.play_btn.setIcon(QIcon(self.ICONS["play"]))
-
     def setup_player(self):
         self.player_frame = QFrame(self)
         self.player_frame.setFixedHeight(60)
@@ -465,9 +423,9 @@ class FloatingFocusApp(QWidget):
         btn_layout = QHBoxLayout()
         playlist_btn = self.create_icon_button(self.ICONS.get("playlist"), self.toggle_playlist_panel)
         self.play_btn_player = self.create_icon_button(self.ICONS.get("play"), self.play_pause)
-        prev_btn = self.create_icon_button(self.ICONS.get("prev"), self.prev_track)
-        next_btn = self.create_icon_button(self.ICONS.get("next"), self.next_track)
-        for btn in [playlist_btn, prev_btn, self.play_btn_player, next_btn]:
+        self.prev_btn = self.create_icon_button(self.ICONS.get("prev"), self.prev_track)
+        self.next_btn = self.create_icon_button(self.ICONS.get("next"), self.next_track)
+        for btn in [playlist_btn, self.prev_btn, self.play_btn_player, self.next_btn]:
             btn.setFixedSize(40, 40)
             btn_layout.addWidget(btn)
         layout.addLayout(btn_layout)
@@ -511,8 +469,8 @@ class FloatingFocusApp(QWidget):
         """)
         layout.addWidget(self.music_volume)
         pygame.mixer.music.set_endevent(pygame.USEREVENT + 1)
-
     def play_pause(self):
+        print("DEBUG: play_pause clicked")
         if not self.track_list:
             return
         path = self.track_list[self.current_index]
@@ -536,14 +494,13 @@ class FloatingFocusApp(QWidget):
             self.is_playing = True
             self.play_btn_player.setIcon(QIcon(self.ICONS["pause"]))
         self.update_track_label()
-
     def update_track_label(self):
         if self.track_list:
             name = os.path.basename(self.track_list[self.current_index])
             name = os.path.splitext(name)[0].replace('_', ' ')
             self.track_label.setText(name[:30] + "..." if len(name) > 30 else name)
-
     def prev_track(self):
+        print("DEBUG: prev_track clicked")
         if not self.track_list:
             return
         self.current_index = (self.current_index - 1) % len(self.track_list)
@@ -556,8 +513,8 @@ class FloatingFocusApp(QWidget):
             self.current_track_position = 0.0
         except Exception as e:
             print(e)
-
     def next_track(self):
+        print("DEBUG: next_track clicked")
         if not self.track_list:
             return
         self.current_index = (self.current_index + 1) % len(self.track_list)
@@ -569,10 +526,27 @@ class FloatingFocusApp(QWidget):
             self.update_track_label()
         except Exception as e:
             print(e)
-
     def handle_music_end(self):
         if self.is_playing and self.track_list:
             self.next_track()
+
+    def on_playlist_item_clicked(self, item):
+        """Переключает воспроизведение на выбранный трек из плейлиста."""
+        if not item:
+            return
+        path = item.data(Qt.UserRole)
+        if not path or path not in self.track_list:
+            return
+        self.current_index = self.track_list.index(path)
+        self.current_track_position = 0.0
+        try:
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.play()
+            self.is_playing = True
+            self.play_btn_player.setIcon(QIcon(self.ICONS["pause"]))
+            self.update_track_label()
+        except Exception as e:
+            print(f"Ошибка воспроизведения трека: {e}")
 
     def setup_noises_button(self):
         self.noises_btn = self.create_icon_button(self.ICONS.get("noises"), self.toggle_noises_panel)
@@ -588,7 +562,6 @@ class FloatingFocusApp(QWidget):
             }
         """)
         self.noises_btn.hide()
-
     def setup_notes_button(self):
         if self.ICONS.get("notes") is None:
             self.notes_btn = QPushButton("📝", self)
@@ -597,7 +570,6 @@ class FloatingFocusApp(QWidget):
             self.notes_btn = self.create_icon_button(self.ICONS.get("notes"), self.toggle_notes_panel)
         self.notes_btn.setFixedSize(40, 40)
         self.notes_btn.hide()
-
     def setup_notes_panel(self):
         self.notes_panel = QFrame(self)
         self.notes_panel.setFixedWidth(300)
@@ -643,12 +615,10 @@ class FloatingFocusApp(QWidget):
         self.notes_text.setPlainText("".join([n.get("content", "") for n in self.notes_data]) or "...")
         self.notes_text.textChanged.connect(self.save_notes)
         layout.addWidget(self.notes_text)
-
     def save_notes(self):
         text = self.notes_text.toPlainText()
-        self.notes_data = [{"content": line} for line in text.split('\n') if line.strip()]
+        self.notes_data = [{"content": line} for line in text.split('') if line.strip()]
         self.save_data()
-
     def toggle_notes_panel(self):
         if self.notes_panel.isVisible():
             self.notes_panel.hide()
@@ -661,7 +631,6 @@ class FloatingFocusApp(QWidget):
             self.notes_panel.move(1550, 425)
             self.notes_panel.show()
             self.close_notes_btn.raise_()
-
     def setup_playlist_panel(self):
         self.playlist_panel = QFrame(self)
         self.playlist_panel.setFixedWidth(515)
@@ -676,7 +645,6 @@ class FloatingFocusApp(QWidget):
         title = QLabel("         Текущий плейлист")
         title.setStyleSheet("color: white; font-weight: bold;")
         layout.addWidget(title)
-        # === НОВЫЙ: QListWidget вместо вертикального лейаута ===
         self.playlist_list = QListWidget()
         self.playlist_list.setStyleSheet("""
             QListWidget {
@@ -708,6 +676,7 @@ class FloatingFocusApp(QWidget):
         self.playlist_list.setMinimumHeight(180)
         self.playlist_list.model().rowsMoved.connect(self.on_playlist_reordered)
         layout.addWidget(self.playlist_list)
+        self.playlist_list.itemClicked.connect(self.on_playlist_item_clicked)
         tr = self.translations.get(self.current_language, {})
         open_lib_btn = QPushButton(f" {tr.get('library_open_button', 'Открыть библиотеку')}")
         open_lib_btn.setStyleSheet("""
@@ -725,7 +694,6 @@ class FloatingFocusApp(QWidget):
         open_lib_btn.clicked.connect(self.toggle_library_panel)
         layout.addWidget(open_lib_btn)
         self.refresh_playlist()
-
     def toggle_playlist_panel(self):
         if self.playlist_panel.isVisible():
             self.playlist_panel.hide()
@@ -738,7 +706,6 @@ class FloatingFocusApp(QWidget):
             x = 30
             self.playlist_panel.move(x-12, y-35)
             self.playlist_panel.show()
-
     def setup_library_panel(self):
         self.library_panel = QFrame(self)
         self.library_panel.setFixedWidth(505)
@@ -790,7 +757,6 @@ class FloatingFocusApp(QWidget):
         scroll.setWidgetResizable(True)
         layout.addWidget(scroll)
         self.refresh_library()
-
     def toggle_library_panel(self):
         if self.library_panel.isVisible():
             self.library_panel.hide()
@@ -802,7 +768,6 @@ class FloatingFocusApp(QWidget):
                 x = self.width() - 510
             self.library_panel.move(x, y-10)
             self.library_panel.show()
-
     def refresh_library(self):
         for i in reversed(range(self.library_layout.count())):
             item = self.library_layout.itemAt(i)
@@ -839,32 +804,27 @@ class FloatingFocusApp(QWidget):
             frame = QFrame()
             frame.setLayout(row)
             self.library_layout.addWidget(frame)
-
     def add_to_playlist(self, path):
         if path not in self.track_list:
             self.track_list.append(path)
             self.refresh_library()
             self.refresh_playlist()
             self.save_data()
-
     def remove_from_playlist(self, path):
         if path in self.track_list:
             self.track_list.remove(path)
             self.refresh_library()
             self.refresh_playlist()
             self.save_data()
-
     def refresh_playlist(self):
         self.playlist_list.clear()
-        # Берём последние 7 треков (новые — в конце списка), но отображаем их в обратном порядке → новые сверху
         recent_tracks = self.track_list[-7:] if len(self.track_list) > 7 else self.track_list
-        for path in reversed(recent_tracks):  # ← Важно! Отображаем в обратном порядке
+        for path in reversed(recent_tracks):
             filename = os.path.basename(path)
             display_name = os.path.splitext(filename)[0].replace('_', ' ')
             item = QListWidgetItem(display_name)
             item.setData(Qt.UserRole, path)
             self.playlist_list.addItem(item)
-        # Выделяем текущий трек
         if self.track_list and self.current_index < len(self.track_list):
             current_path = self.track_list[self.current_index]
             for i in range(self.playlist_list.count()):
@@ -872,7 +832,6 @@ class FloatingFocusApp(QWidget):
                 if item.data(Qt.UserRole) == current_path:
                     self.playlist_list.setCurrentRow(i)
                     break
-
     def on_playlist_reordered(self, parent, start, end, destination, row):
         new_order = []
         for i in range(self.playlist_list.count()):
@@ -890,7 +849,6 @@ class FloatingFocusApp(QWidget):
             current_path = self.track_list[self.current_index]
             self.current_index = self.track_list.index(current_path)
         self.save_data()
-
     def setup_noises_panel(self):
         self.noises_panel = DraggableFrame(self)
         self.noises_panel.setFixedSize(360, 300)
@@ -981,7 +939,6 @@ class FloatingFocusApp(QWidget):
             noises_layout.addLayout(row_layout)
         main_layout.addLayout(noises_layout)
         self.noises_panel.hide()
-
     def update_noises_panel_style(self):
         self.noises_panel.setStyleSheet(f"""
             DraggableFrame {{
@@ -990,21 +947,17 @@ class FloatingFocusApp(QWidget):
                 border-radius: 20px;
             }}
         """)
-
     def move_noises_panel(self, x, y):
         if hasattr(self, 'noises_panel'):
             self.noises_panel.move(x, y)
-
     def argb(self, a, r, g, b):
         self._panel_color = QColor(r, g, b, a)
         self.update_noises_panel_style()
-
     def toggle_noises_panel(self):
         if self.noises_panel.isVisible():
             self.hide_noises_panel()
         else:
             self.show_noises_panel()
-
     def show_noises_panel(self):
         if hasattr(self, 'noises_btn'):
             btn_rect = self.noises_btn.geometry()
@@ -1019,10 +972,8 @@ class FloatingFocusApp(QWidget):
             self.noises_panel.move(self.width() - 400, self.height() - 350)
         self.noises_panel.show()
         self.noises_panel.raise_()
-
     def hide_noises_panel(self):
         self.noises_panel.hide()
-
     def set_noise_volume(self, name, value):
         vol = value / 100.0
         self.noises_volumes[name] = int(value)
@@ -1034,7 +985,6 @@ class FloatingFocusApp(QWidget):
             else:
                 channels[name].stop()
         self.save_data()
-
     def create_icon_button(self, pixmap, callback):
         btn = QPushButton(self)
         if pixmap:
@@ -1052,8 +1002,6 @@ class FloatingFocusApp(QWidget):
             }
         """)
         return btn
-
-    # ============ TO-DO LIST С ИКОНКАМИ ============
     def setup_todo_panel(self):
         self.todo_panel = DraggableFrame(self)
         self.todo_panel.setFixedSize(360, 480)
@@ -1216,7 +1164,6 @@ class FloatingFocusApp(QWidget):
         layout.addWidget(scroll)
         self.refresh_todo_list()
         self.todo_panel.hide()
-
     def add_todo_task(self):
         text = self.todo_input.text().strip()
         if not text:
@@ -1230,13 +1177,11 @@ class FloatingFocusApp(QWidget):
         self.refresh_todo_list()
         self.refresh_kanban_board()
         self.save_data()
-
     def remove_todo_task(self, index):
         if 0 <= index < len(self.tasks_data):
             del self.tasks_data[index]
             self.refresh_todo_list()
             self.save_data()
-
     def toggle_todo_task(self, index, state):
         if not (0 <= index < len(self.tasks_data)):
             return
@@ -1253,7 +1198,6 @@ class FloatingFocusApp(QWidget):
         self.refresh_todo_list()
         self.refresh_kanban_board()
         self.save_data()
-
     def refresh_todo_list(self):
         while self.todo_layout.count():
             item = self.todo_layout.takeAt(0)
@@ -1347,7 +1291,6 @@ class FloatingFocusApp(QWidget):
             task_layout.addWidget(text_label, 1)
             task_layout.addWidget(delete_btn)
             self.todo_layout.addWidget(task_widget)
-
     def show_todo_panel(self):
         if self.todo_panel.isVisible():
             self.hide_todo_panel()
@@ -1355,11 +1298,8 @@ class FloatingFocusApp(QWidget):
             self.todo_panel.move(20, 160)
             self.todo_panel.show()
             self.todo_panel.raise_()
-
     def hide_todo_panel(self):
         self.todo_panel.hide()
-
-    # ============ KANBAN BOARD ============
     def setup_kanban_panel(self):
         self.kanban_panel = DraggableFrame(self)
         self.kanban_panel.resize(740, 540)
@@ -1492,7 +1432,6 @@ class FloatingFocusApp(QWidget):
         self.kanban_columns = {}
         self.create_kanban_columns_from_settings()
         self.kanban_panel.hide()
-
     def create_kanban_column(self, title, color, key="custom"):
         frame = QFrame()
         frame.setStyleSheet(f"""
@@ -1553,7 +1492,6 @@ class FloatingFocusApp(QWidget):
         add_task_layout.addStretch()
         layout.addLayout(add_task_layout)
         return frame
-
     def create_kanban_columns_from_settings(self):
         try:
             with open(KANBAN_COLUMNS_FILE, "r", encoding="utf-8") as f:
@@ -1582,7 +1520,6 @@ class FloatingFocusApp(QWidget):
             self.kanban_columns[key] = column_frame
             self.columns_layout.addWidget(column_frame)
         self.adjust_kanban_panel_width()
-
     def adjust_kanban_panel_width(self):
         if not hasattr(self, 'columns_layout') or not self.kanban_columns:
             return
@@ -1596,7 +1533,6 @@ class FloatingFocusApp(QWidget):
         for frame in self.kanban_columns.values():
             frame.setFixedWidth(column_width)
         self.kanban_panel.setFixedWidth(final_width)
-
     def refresh_kanban_board(self):
         for key in self.kanban_columns.keys():
             frame = self.kanban_columns[key]
@@ -1709,7 +1645,6 @@ class FloatingFocusApp(QWidget):
                 make_mouse_events(task_widget, key)
                 task_layout.addWidget(delete_btn)
                 layout.addWidget(task_widget)
-
     def show_kanban_help(self):
         tr = self.translations.get(self.current_language, self.translations.get("ru", {}))
         help_text = tr.get("kanban_help_text", """
@@ -1731,7 +1666,6 @@ class FloatingFocusApp(QWidget):
         """)
         title = tr.get("kanban_help_title", "Помощь по Kanban")
         QMessageBox.information(self, title, help_text)
-
     def show_kanban_panel(self):
         if self.kanban_panel.isVisible():
             self.hide_kanban_panel()
@@ -1739,10 +1673,8 @@ class FloatingFocusApp(QWidget):
             self.kanban_panel.move(160, 20)
             self.kanban_panel.show()
             self.kanban_panel.raise_()
-
     def hide_kanban_panel(self):
         self.kanban_panel.hide()
-
     def remove_kanban_task(self, task_text):
         for col in self.kanban_columns.keys():
             if task_text in self.kanban_data.get(col, []):
@@ -1753,8 +1685,6 @@ class FloatingFocusApp(QWidget):
         self.refresh_todo_list()
         self.refresh_kanban_board()
         self.save_data()
-
-    # ============ РАДИАЛЬНОЕ МЕНЮ НАСТРОЕК ============
     def setup_settings_radial_menu(self):
         settings_icon = self.ICONS.get("settings")
         self.settings_radial_trigger_btn = self.create_icon_button(settings_icon, self.toggle_settings_radial_menu)
@@ -1777,6 +1707,7 @@ class FloatingFocusApp(QWidget):
         self.settings_radial_buttons.append(bg_btn)
         lang_btn = self.create_radial_button("settings_language", " Язык", self.handle_language_setting)
         self.settings_radial_buttons.append(lang_btn)
+        
         exit_btn = self.create_radial_button("settings_exit", " Выход", self.handle_exit_setting)
         self.settings_radial_buttons.append(exit_btn)
         for btn in self.settings_radial_buttons:
@@ -1787,13 +1718,11 @@ class FloatingFocusApp(QWidget):
         self.settings_radial_trigger_btn.raise_()
         self.settings_radial_trigger_btn.show()
         self.settings_radial_menu_open = False
-
     def toggle_settings_radial_menu(self):
         if self.settings_radial_menu_open:
             self.hide_settings_radial_menu()
         else:
             self.show_settings_radial_menu()
-
     def show_settings_radial_menu(self):
         if self.settings_radial_menu_open:
             self.hide_settings_radial_menu()
@@ -1819,7 +1748,6 @@ class FloatingFocusApp(QWidget):
         self.settings_radial_trigger_btn.raise_()
         for btn in self.settings_radial_buttons:
             btn.raise_()
-
     def hide_settings_radial_menu(self):
         if not self.settings_radial_menu_open:
             return
@@ -1830,10 +1758,8 @@ class FloatingFocusApp(QWidget):
             self.settings_overlay.close()
             self.settings_overlay.deleteLater()
             del self.settings_overlay
-
     def handle_background_setting(self):
         self.next_background()
-
     def handle_language_setting(self):
         dialog = QDialog(self)
         tr = self.translations.get(self.current_language, self.translations.get("ru", {}))
@@ -1871,15 +1797,12 @@ class FloatingFocusApp(QWidget):
                 col = 0
                 row += 1
         dialog.exec_()
-
     def _set_language_and_close_dialog(self, lang_code, dialog):
         self.set_language(lang_code)
         dialog.accept()
-
     def handle_exit_setting(self):
         self.close()
 
-    # ============ РАДИАЛЬНОЕ МЕНЮ ============
     def setup_radial_menu(self):
         radial_icon = self.ICONS.get("radial_menu") or self.ICONS.get("menu") or self.ICONS.get("settings")
         self.radial_trigger_btn = self.create_icon_button(radial_icon, self.toggle_radial_menu)
@@ -1907,7 +1830,6 @@ class FloatingFocusApp(QWidget):
         self.radial_trigger_btn.move(20, 20)
         self.radial_trigger_btn.raise_()
         self.radial_trigger_btn.show()
-
     def create_radial_button(self, icon_name, tooltip_text, callback):
         if self.ICONS.get(icon_name):
             btn = self.create_icon_button(self.ICONS.get(icon_name), callback)
@@ -1931,13 +1853,11 @@ class FloatingFocusApp(QWidget):
         """)
         btn.hide()
         return btn
-
     def toggle_radial_menu(self):
         if self.radial_menu_open:
             self.hide_radial_menu()
         else:
             self.show_radial_menu()
-
     def show_radial_menu(self):
         if self.radial_menu_open:
             self.hide_radial_menu()
@@ -1963,7 +1883,6 @@ class FloatingFocusApp(QWidget):
         self.radial_trigger_btn.raise_()
         for btn in self.radial_buttons:
             btn.raise_()
-
     def hide_radial_menu(self):
         if not self.radial_menu_open:
             return
@@ -1974,8 +1893,6 @@ class FloatingFocusApp(QWidget):
             self.overlay.close()
             self.overlay.deleteLater()
             del self.overlay
-
-    # ============ ЛОГИКА СМЕНЫ ЯЗЫКА ============
     def set_language(self, lang_code):
         if lang_code not in self.translations:
             return
@@ -2017,7 +1934,7 @@ class FloatingFocusApp(QWidget):
                 if isinstance(title_label, QLabel):
                     title_label.setText(tr.get("kanban_title", "Kanban Board"))
         if hasattr(self, 'settings_radial_buttons'):
-            button_keys = ["background_setting", "language_setting", "exit_setting"]
+            button_keys = ["background_setting", "language_setting", "button_color_setting", "exit_setting"]
             for i, btn in enumerate(self.settings_radial_buttons):
                 if i < len(button_keys):
                     text = tr.get(button_keys[i], button_keys[i])
@@ -2045,14 +1962,12 @@ class FloatingFocusApp(QWidget):
             self.todo_input.setPlaceholderText(f"✍️ {tr.get('todo_input_placeholder', 'Введите задачу...')}")
         self.update_kanban_column_titles()
         self.save_language_preference()
-
     def save_language_preference(self):
         try:
             with open(LANGUAGE_FILE, "w", encoding="utf-8") as f:
                 json.dump({"language": self.current_language}, f)
         except Exception as e:
             print(f"Ошибка сохранения языка: {e}")
-
     def load_language_preference(self):
         try:
             if os.path.exists(LANGUAGE_FILE):
@@ -2063,7 +1978,6 @@ class FloatingFocusApp(QWidget):
                         self.current_language = lang
         except Exception as e:
             print(f"Ошибка загрузки языка: {e}")
-
     def update_kanban_column_titles(self):
         if not hasattr(self, 'kanban_columns') or not self.kanban_columns:
             return
@@ -2081,8 +1995,6 @@ class FloatingFocusApp(QWidget):
                     translation_key = column_key_map.get(internal_key, internal_key)
                     new_title = tr.get(translation_key, internal_key.capitalize())
                     title_widget.setText(new_title)
-
-    # ============ ЛОГИКА СМЕНЫ ФОНА ============
     def load_backgrounds(self):
         self.background_files = []
         if not os.path.exists(VIDEO_FOLDER):
@@ -2093,7 +2005,6 @@ class FloatingFocusApp(QWidget):
                 self.background_files.append(os.path.join(VIDEO_FOLDER, file))
         self.background_index = 0
         self.load_background_preference()
-
     def load_background_preference(self):
         try:
             if os.path.exists(BACKGROUND_FILE):
@@ -2104,14 +2015,12 @@ class FloatingFocusApp(QWidget):
                         self.background_index = index
         except Exception as e:
             print(f"Ошибка загрузки фона: {e}")
-
     def save_background_preference(self):
         try:
             with open(BACKGROUND_FILE, "w", encoding="utf-8") as f:
                 json.dump({"index": self.background_index}, f)
         except Exception as e:
             print(f"Ошибка сохранения фона: {e}")
-
     def next_background(self):
         if not hasattr(self, 'background_files') or len(self.background_files) == 0:
             self.load_backgrounds()
@@ -2120,22 +2029,19 @@ class FloatingFocusApp(QWidget):
         self.background_index = (self.background_index + 1) % len(self.background_files)
         self.apply_background(self.background_files[self.background_index])
         self.save_background_preference()
-
     def apply_background(self, file_path):
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
             self.video_timer.stop()
         if file_path.lower().endswith(('.mov', '.mp4', '.avi', '.mkv')):
             self.cap = cv2.VideoCapture(file_path)
-            self.video_timer.start(33)
+            self.video_timer.start(16)
         else:
             pixmap = QPixmap(file_path)
             if not pixmap.isNull():
                 pixmap = pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
                 self.background_label.setPixmap(pixmap)
                 self.background_label.setGeometry(0, 0, self.width(), self.height())
-
-    # ============ ЗАГРУЗКА/СОХРАНЕНИЕ ============
     def load_data(self):
         try:
             if os.path.exists(NOTES_FILE):
@@ -2186,7 +2092,6 @@ class FloatingFocusApp(QWidget):
             except:
                 self.kanban_data = {"todo": [], "progress": [], "done": []}
             self.file_paths = {}
-
     def save_data(self):
         try:
             with open(NOTES_FILE, "w", encoding="utf-8") as f:
@@ -2206,7 +2111,6 @@ class FloatingFocusApp(QWidget):
                 json.dump(self.file_paths, f, indent=2)
         except Exception as e:
             print(f"❌ Save error: {e}")
-
     def load_video(self):
         if not hasattr(self, 'background_files') or len(self.background_files) == 0:
             self.load_backgrounds()
@@ -2214,7 +2118,6 @@ class FloatingFocusApp(QWidget):
             self.background_label.setStyleSheet("background-color: #111;")
             return
         self.apply_background(self.background_files[self.background_index])
-
     def update_video(self):
         if not hasattr(self, 'cap') or not self.cap.isOpened():
             return
@@ -2228,7 +2131,6 @@ class FloatingFocusApp(QWidget):
         img = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(img).scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
         self.background_label.setPixmap(pixmap)
-
     def resizeEvent(self, event):
         self.background_label.setGeometry(0, 0, self.width(), self.height())
         if not hasattr(self, 'cap') or not self.cap.isOpened():
@@ -2256,12 +2158,9 @@ class FloatingFocusApp(QWidget):
         if self.radial_menu_open:
             self.hide_radial_menu()
         super().resizeEvent(event)
-
     def closeEvent(self, event):
         self.save_data()
         event.accept()
-
-    # --- УПРАВЛЕНИЕ НАСТРОЙКАМИ ДОСКИ KANBAN ---
     def open_kanban_settings(self):
         tr = self.translations.get(self.current_language, {})
         dialog = QDialog(self)
@@ -2358,7 +2257,6 @@ class FloatingFocusApp(QWidget):
             pass
         else:
             self.restore_kanban_settings()
-
     def populate_kanban_settings_list(self):
         self.kanban_settings_list.clear()
         try:
@@ -2373,7 +2271,6 @@ class FloatingFocusApp(QWidget):
             item = QListWidgetItem(title)
             item.setData(Qt.UserRole, col_config)
             self.kanban_settings_list.addItem(item)
-
     def add_kanban_column_dialog(self):
         tr = self.translations.get(self.current_language, {})
         dialog = QDialog(self)
@@ -2417,7 +2314,6 @@ class FloatingFocusApp(QWidget):
             if not hasattr(self, 'kanban_data'):
                 self.kanban_data = {}
             self.kanban_data[key] = []
-
     def generate_unique_column_key(self, title):
         base_key = "".join(c.lower() for c in title if c.isalnum() or c == '_') or "column"
         key = base_key
@@ -2432,7 +2328,6 @@ class FloatingFocusApp(QWidget):
             key = f"{base_key}_{counter}"
             counter += 1
         return key
-
     def edit_selected_kanban_column(self):
         tr = self.translations.get(self.current_language, {})
         current_row = self.kanban_settings_list.currentRow()
@@ -2481,7 +2376,6 @@ class FloatingFocusApp(QWidget):
             tr_format = tr.get("kanban_column_task_count_format", " (Задач: {count})")
             current_item.setText(f"{new_title}{tr_format.format(count=task_count)}")
             current_item.setData(Qt.UserRole, new_config)
-
     def delete_selected_kanban_column(self):
         tr = self.translations.get(self.current_language, {})
         current_row = self.kanban_settings_list.currentRow()
@@ -2509,7 +2403,6 @@ class FloatingFocusApp(QWidget):
                 return
         self.kanban_data.pop(col_key, None)
         self.kanban_settings_list.takeItem(current_row)
-
     def move_selected_column(self, direction):
         current_row = self.kanban_settings_list.currentRow()
         if current_row < 0:
@@ -2520,7 +2413,6 @@ class FloatingFocusApp(QWidget):
         current_item = self.kanban_settings_list.takeItem(current_row)
         self.kanban_settings_list.insertItem(new_row, current_item)
         self.kanban_settings_list.setCurrentRow(new_row)
-
     def apply_kanban_settings(self, dialog):
         try:
             new_columns_config = []
@@ -2538,10 +2430,8 @@ class FloatingFocusApp(QWidget):
             dialog.accept()
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось применить настройки: {str(e)}")
-
     def restore_kanban_settings(self):
         pass
-
     def show_add_task_input(self, column_key):
         if column_key not in self.kanban_columns:
             return
@@ -2601,7 +2491,6 @@ class FloatingFocusApp(QWidget):
             else:
                 self.cancel_add_task(input_container, column_layout)
         line_edit.focusOutEvent = new_focus_out
-
     def add_task_from_input(self, line_edit, input_container, column_key, column_layout):
         text = line_edit.text().strip()
         if text:
@@ -2627,12 +2516,9 @@ class FloatingFocusApp(QWidget):
             self.refresh_kanban_board()
             self.refresh_todo_list()
         self.cancel_add_task(input_container, column_layout)
-
     def cancel_add_task(self, input_container, column_layout):
         column_layout.removeWidget(input_container)
         input_container.deleteLater()
-
-# === DRAGGABLE FRAME ===
 class DraggableFrame(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -2646,8 +2532,6 @@ class DraggableFrame(QFrame):
         if event.buttons() == Qt.LeftButton and self.drag_start_position:
             self.move(event.globalPos() - self.drag_start_position)
             event.accept()
-
-# === KANBAN DROP CONTAINER ===
 class KanbanDropContainer(QWidget):
     def __init__(self, parent_app, column_name):
         super().__init__()
@@ -2727,7 +2611,6 @@ class KanbanDropContainer(QWidget):
                 app.refresh_kanban_board()
                 app.save_data()
         event.accept()
-
 def set_app_icon():
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
