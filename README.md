@@ -1,4 +1,4 @@
-# FloatingFocusApp
+# Project-Focus 
 
 Focus app: Pomodoro, music, noises, notes, To-Do, and Kanban.
 
